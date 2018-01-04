@@ -1,6 +1,8 @@
 #include <cstddef>
 #include <iostream>
 #include <vector>
+#include <list>
+#include <typeinfo>
 
 // much credit to Alexandrescu and Loki library
 
@@ -63,7 +65,6 @@ void* Chunk::allocate(size_t blockSize)
     uchar* pResult = pData + firstAvailableBlock * blockSize;
     firstAvailableBlock = *pResult;
     --blocksAvailable;
-    std::cout << "blocksAvailable after allocate " << blocksAvailable << std::endl;
     return pResult;
 }
 
@@ -73,7 +74,6 @@ void Chunk::deallocate(void* p, size_t blockSize)
     // find last but one available block
     firstAvailableBlock = static_cast<uchar>((toRelease - pData) / blockSize);
     ++blocksAvailable;
-    std::cout << "blocksAvailable after deallocate " << blocksAvailable << std::endl;
 }
 
 class FixedAllocator 
@@ -88,13 +88,12 @@ public:
     FixedAllocator();
     ~FixedAllocator();
     void init(size_t blockSize, size_t pageSize);
-    const int blockOwner(void* p) const;
     void * allocate();
     void deallocate(void* p);
 };
 
-FixedAllocator::FixedAllocator()
-    :blockSize(0),
+FixedAllocator::FixedAllocator():
+    blockSize(0),
     blocks(0),
     chunks(0),
     allocChunk(nullptr)
@@ -117,28 +116,14 @@ void FixedAllocator::init(size_t blockSize_, size_t pageSize)
     blocks = static_cast<uchar>(numBlocks);
 }
 
-const int FixedAllocator::blockOwner(void* p) const
-{
-    size_t chunkLen = blocks * blockSize;
-    std::vector<int>::size_type i = 0, sz = chunks.size();
-    for (; i < sz; i++)
-    {
-    	  if (chunks[i].hasBlock(p, chunkLen))
-        {
-        	   return i;        
-        }    
-    }
-    return -1;
-}
-
 void* FixedAllocator::allocate()
 {
 	 if (!allocChunk || allocChunk->blocksAvailable == 0)
     {
-        Chunks::iterator i = chunks.begin();    
-        for (;;++i)
+        Chunks::iterator it = chunks.begin();    
+        for (;;++it)
         {
-            if (i == chunks.end())
+            if (it == chunks.end())
             {
             	 // allocate memory for one more chunk
                 chunks.reserve(chunks.size() + 1);
@@ -150,10 +135,10 @@ void* FixedAllocator::allocate()
                 allocChunk = &chunks.back();
                 break;
             }
-            if (i->blocksAvailable > 0)
+            if (it->blocksAvailable > 0)
             {
             	 // points to chunk with available blocks
-                allocChunk = &*i;
+                allocChunk = &*it;
                 break;            
             }                   
         }
@@ -163,51 +148,103 @@ void* FixedAllocator::allocate()
 
 void FixedAllocator::deallocate(void* p)
 {
-    // TODO. Optimize. Now very bruteforce and non-efficient
-    const int chunkPos = blockOwner(p); 
-    if (chunkPos != -1) 
+    // TODO. Optimize this spaghetti code
+    size_t chunkLen = blocks * blockSize;
+    Chunks::iterator it;
+    int cPos = 0;
+    for (it = chunks.begin(); it != chunks.end(); ++it, ++cPos)
     {
-    	   Chunk chunk = chunks[chunkPos];
-    	   chunk.deallocate(p, blockSize);         
-         // if chunk is releasable, release memory 
-         if (chunk.releasable(blocks))
-         {
-             chunk.release();
-             chunks.erase(chunks.begin() + chunkPos);
-             // allocChunk may point to deleted chunk
-             // so, reset it                      
-             allocChunk = &chunks.back();
-         } else {
-         	 // there are free blocks in chunk
-         	 // so, reset allocChunk for faster future allocation
-             allocChunk = &chunk;    
-         }         
-    }    
+        if (it->hasBlock(p, chunkLen))
+        {
+            it->deallocate(p, blockSize);  
+            if (it->releasable(blocks)) {
+                it->release();
+                chunks.erase(chunks.begin() + cPos);
+                // allocChunk may point to deleted chunk
+                // so, reset it
+                if (!chunks.empty()) {
+                    allocChunk = &chunks.back();
+                } else {
+                    allocChunk = nullptr;                
+                }
+            } else {
+                // there are free blocks in chunk
+         	    // so, reset allocChunk for fast search
+         	    allocChunk = &*it;     
+            }
+            break;   
+        }    
+    }  
 }
 
-template<class T, size_t T_num_els>
-struct Allocator  
+class SmallObjAllocator
 {
+public:
+    SmallObjAllocator(size_t pageSize, size_t maxObjectSize);
+    void* allocate(size_t numBytes);
+    void deallocate(void* p, size_t numBytes);
+private:
+    FixedAllocator* pool;
+    size_t maxObjectSize;
+};
+
+SmallObjAllocator::SmallObjAllocator(size_t pageSize, size_t maxObjectSize_):
+    pool(nullptr),
+    maxObjectSize(maxObjectSize_)
+{
+    pool = new FixedAllocator[maxObjectSize];
+    for (size_t i = 0; i < maxObjectSize; ++i)
+    {
+    	  pool[i].init(i + 1, pageSize); 
+    }
+}
+
+void* SmallObjAllocator::allocate(size_t numBytes) {
+    if (numBytes > maxObjectSize)
+    {
+        return ::operator new(numBytes);    
+    }    
+    FixedAllocator& alloc = pool[numBytes-1];
+    return alloc.allocate();
+}
+
+void SmallObjAllocator::deallocate(void* p, size_t numBytes)
+{
+    if (numBytes > maxObjectSize)
+    {
+        ::operator delete(p);   
+        return; 
+    }
+    FixedAllocator& alloc = pool[numBytes-1];
+    alloc.deallocate(p);
+}
+
+template<typename T, size_t numBlocks = 64>
+class Allocator  
+{
+public:
     	
     Allocator(){};
                 
-    template<class U, size_t U_num_els>
-    Allocator(Allocator<U, U_num_els> const&);
+    template<typename U, size_t N>
+    Allocator(Allocator<U, N> const&);
     
-    template<class U>
+    template<typename U>
     struct rebind 
     {
-        using other = Allocator<U, T_num_els>;
+        using other = Allocator<U, numBlocks>;
     };
         
-    T* allocate(size_t s) 
+    T* allocate(size_t cnt) 
     {
-    	  return static_cast<T*>(::operator new(s * sizeof(T)));        
+    	  return reinterpret_cast<T*>(
+    	      allocator.allocate(sizeof(T) * cnt)
+    	  );       
     }
         
-    void deallocate(T* p, size_t s) 
+    void deallocate(T* p, size_t cnt) 
     {
-        ::operator delete(p);
+        allocator.deallocate(p, sizeof(T) * cnt);
     }
         
     void construct(T* p, T const& val) 
@@ -221,18 +258,20 @@ struct Allocator
     } 
         
     using value_type = T;
-       
-};
     
+private:
+    static SmallObjAllocator allocator;       
+};
 
-int main() {
-	 FixedAllocator* alloc = new FixedAllocator();
-	 alloc->init(4, 12);
-	 void* p = alloc->allocate();
-	 void* q = alloc->allocate();
-	 void* r = alloc->allocate();
-	 alloc->deallocate(p);
-	 alloc->deallocate(q);
-	 alloc->deallocate(r);	 
+template<typename T, size_t numBlocks>
+SmallObjAllocator Allocator<T, numBlocks>::allocator(numBlocks * sizeof(T), sizeof(T));
+     
+
+int main() {	 
+	 std::list<int, Allocator<int, 8>> vList;
+	 vList.push_back(1);
+	 vList.push_back(2);
+	 vList.push_back(3);
+	 
 	 return 0;
 }

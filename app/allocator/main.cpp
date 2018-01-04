@@ -2,9 +2,9 @@
 #include <iostream>
 #include <vector>
 #include <list>
-#include <typeinfo>
-
-// much credit to Alexandrescu and Loki library
+#include <chrono>
+#include <string>
+using namespace std::chrono;
 
 using uchar = unsigned char;
 
@@ -38,6 +38,7 @@ private:
     uchar firstAvailableBlock, blocksAvailable;    
 };
 
+
 void Chunk::init(size_t blockSize, uchar blocks)
 {
 	 // for n of Ts it will allocate n * sizeof(T) memory
@@ -53,10 +54,12 @@ void Chunk::init(size_t blockSize, uchar blocks)
     }
 }
 
+
 void Chunk::release()
 {
     ::operator delete(pData);
 }
+
 
 void* Chunk::allocate(size_t blockSize)
 {
@@ -68,6 +71,7 @@ void* Chunk::allocate(size_t blockSize)
     return pResult;
 }
 
+
 void Chunk::deallocate(void* p, size_t blockSize)
 {
     uchar* toRelease = static_cast<uchar*>(p);
@@ -75,6 +79,7 @@ void Chunk::deallocate(void* p, size_t blockSize)
     firstAvailableBlock = static_cast<uchar>((toRelease - pData) / blockSize);
     ++blocksAvailable;
 }
+
 
 class FixedAllocator 
 {
@@ -92,6 +97,7 @@ public:
     void deallocate(void* p);
 };
 
+
 FixedAllocator::FixedAllocator():
     blockSize(0),
     blocks(0),
@@ -99,6 +105,7 @@ FixedAllocator::FixedAllocator():
     allocChunk(nullptr)
 {
 }
+
 
 FixedAllocator::~FixedAllocator()
 {
@@ -109,12 +116,14 @@ FixedAllocator::~FixedAllocator()
     }
 }
 
+
 void FixedAllocator::init(size_t blockSize_, size_t pageSize)
 {
 	 blockSize = blockSize_;
     size_t numBlocks = pageSize / blockSize;
     blocks = static_cast<uchar>(numBlocks);
 }
+
 
 void* FixedAllocator::allocate()
 {
@@ -146,9 +155,9 @@ void* FixedAllocator::allocate()
     return allocChunk->allocate(blockSize);
 }
 
+
 void FixedAllocator::deallocate(void* p)
 {
-    // TODO. Optimize this spaghetti code
     size_t chunkLen = blocks * blockSize;
     Chunks::iterator it;
     int cPos = 0;
@@ -170,12 +179,13 @@ void FixedAllocator::deallocate(void* p)
             } else {
                 // there are free blocks in chunk
          	    // so, reset allocChunk for fast search
-         	    allocChunk = &*it;     
+         	    allocChunk = &*it;    
             }
             break;   
         }    
-    }  
+    } 
 }
+
 
 class SmallObjAllocator
 {
@@ -188,6 +198,7 @@ private:
     size_t maxObjectSize;
 };
 
+
 SmallObjAllocator::SmallObjAllocator(size_t pageSize, size_t maxObjectSize_):
     pool(nullptr),
     maxObjectSize(maxObjectSize_)
@@ -199,6 +210,7 @@ SmallObjAllocator::SmallObjAllocator(size_t pageSize, size_t maxObjectSize_):
     }
 }
 
+
 void* SmallObjAllocator::allocate(size_t numBytes) {
     if (numBytes > maxObjectSize)
     {
@@ -207,6 +219,7 @@ void* SmallObjAllocator::allocate(size_t numBytes) {
     FixedAllocator& alloc = pool[numBytes-1];
     return alloc.allocate();
 }
+
 
 void SmallObjAllocator::deallocate(void* p, size_t numBytes)
 {
@@ -218,6 +231,7 @@ void SmallObjAllocator::deallocate(void* p, size_t numBytes)
     FixedAllocator& alloc = pool[numBytes-1];
     alloc.deallocate(p);
 }
+
 
 template<typename T, size_t numBlocks = 64>
 class Allocator  
@@ -263,15 +277,27 @@ private:
     static SmallObjAllocator allocator;       
 };
 
+
 template<typename T, size_t numBlocks>
 SmallObjAllocator Allocator<T, numBlocks>::allocator(numBlocks * sizeof(T), sizeof(T));
+
      
+template<class List>
+void test(std::string comment, List l)
+{
+    std::cout << comment;
+    auto start_time = high_resolution_clock::now();
+    for (int i = 0; i < 10000; ++i)
+    {
+        l.push_back(i);    
+    }
+    auto end_time = high_resolution_clock::now();
+    std::cout << duration_cast<milliseconds>(end_time  - start_time).count() << "ms" << std::endl;
+}
+
 
 int main() {	 
-	 std::list<int, Allocator<int, 8>> vList;
-	 vList.push_back(1);
-	 vList.push_back(2);
-	 vList.push_back(3);
-	 
+	 test("default list ", std::list<int>());	
+	 test("list with custom allocator ", std::list<int, Allocator<int, 10000>>());
 	 return 0;
 }

@@ -1,5 +1,8 @@
 language: cpp
-compiler: clang
+compiler: 
+    - clang
+    - gcc
+    - g++
 before_script:
     - sudo apt-get install libboost-test-dev -y
 script:

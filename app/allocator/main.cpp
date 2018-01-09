@@ -27,7 +27,7 @@ int main() {
 	 	  m1.insert(std::pair<int,int>(i,factorial(i)));
 	 }	 
 	 
-	 auto m2 = std::map<int,int, std::less<>, Allocator<std::pair<const int, int>, 10>>{};
+	 auto m2 = std::map<int,int, std::less<int>, Allocator<std::pair<const int, int>, 10>>{};
 	 for(int i = 0; i < 10; ++i)
 	 {
 	 	  m2.insert(std::pair<int,int>(i,factorial(i)));

@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(ip_filter VERSION 0.0.$ENV{TRAVIS_BUILD_NUMBER})
+project(allocator VERSION 0.0.0) #$ENV{TRAVIS_BUILD_NUMBER}
 
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
-add_subdirectory(libs/libfilter)
-add_subdirectory(app/ip_filter)
+add_subdirectory(libs/liballocator)
+add_subdirectory(libs/slist)
+add_subdirectory(app/allocator)
 
 set(CPACK_GENERATOR DEB)
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
@@ -15,4 +16,4 @@ set(CPACK_PACKAGE_CONTACT vv_volkov@mail.ru)
 include(CPack)
 
 enable_testing()
-add_subdirectory(tests/libfilter)
+add_subdirectory(tests/allocator)

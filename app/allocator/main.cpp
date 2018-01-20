@@ -10,8 +10,8 @@ long long memo[maxn];
 
 long long factorial(int n)
 {
-	 if (n < 2) return 1;
-	 if (memo[n]) return memo[n];
+	if (n < 2) return 1;
+	if (memo[n]) return memo[n];
     long long res = 1;
     for (int i = 2; i <= n; ++i)
     {
@@ -35,20 +35,20 @@ int main() {
 	 
 	 for (auto const &item : m2)
 	 {
-        std::cout << item.first << " " << item.second << std::endl;
+         std::cout << item.first << " " << item.second << std::endl;
 	 }
 	 	 
 	 auto c1 = slist<int>{};	 
 	 for(int i = 0; i < 10; ++i)
 	 {
-        c1.emplace(i);	 
+         c1.emplace(i);	 
 	 }
 	 
 	 
 	 auto c2 = slist<int,Allocator<int,10>>{};	 
 	 for(int i = 0; i < 10; ++i)
 	 {
-        c2.emplace(i);	 
+         c2.emplace(i);	 
 	 }
 	 	 
 	 for(auto it : c2)

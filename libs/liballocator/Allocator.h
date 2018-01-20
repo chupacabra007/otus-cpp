@@ -3,20 +3,20 @@
 #include <cstddef>
 #include "SmallObjAllocator.h"
 
-template<typename T, size_t numBlocks = 64>
+template<typename T, size_t num_of_blocks = 64>
 class Allocator  
 {
 public:
     	
-    Allocator(){};
+    Allocator() {};
                 
     template<typename U, size_t N>
-    Allocator(Allocator<U, N> const&);
+    Allocator(Allocator<U, N> const&) noexcept {}
     
     template<typename U>
     struct rebind 
     {
-        using other = Allocator<U, numBlocks>;
+        using other = Allocator<U, num_of_blocks>;
     };
         
     T* allocate(size_t cnt) 
@@ -52,5 +52,6 @@ private:
 };
 
 
-template<typename T, size_t numBlocks>
-SmallObjAllocator Allocator<T, numBlocks>::allocator(numBlocks * sizeof(T), sizeof(T));
+template<typename T, size_t num_of_blocks>
+SmallObjAllocator Allocator<T, num_of_blocks>::allocator(num_of_blocks * sizeof(T), sizeof(T));
+

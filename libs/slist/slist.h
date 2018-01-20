@@ -1,16 +1,26 @@
-#pragma once
-
-#include "node.h"
 #include <memory>
+#include "node.h"
 
-template<typename T, typename Alloc = std::allocator<node<T>>>
+template<typename T, typename Alloc = std::allocator<T>>
 class slist
 {
 private:
     node<T>* m_head = nullptr;
     node<T>* m_tail = nullptr;
     Alloc allocator;
+    using allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<node<T>>;
+    allocator_type node_allocator {allocator};
 public:
+
+    slist(): m_head(nullptr) {}
+    
+    ~slist() 
+    {
+        while (m_head)
+        {
+            remove();
+        }    
+    }
 
     class iterator 
     {
@@ -63,8 +73,8 @@ public:
     template<typename... Args>
     void emplace(T v)    
     {
-    	  auto new_node = allocator.allocate(1);   	  
-    	  allocator.construct(new_node, v);   	  
+          auto new_node = node_allocator.allocate(1);   	  
+    	  node_allocator.construct(new_node, v);   	  
     	  if (m_head)
     	  {
             m_tail->m_next = new_node;    	  
@@ -81,9 +91,9 @@ public:
         if (m_head)
         {
             node<T>* new_head = m_head->m_next;  
-            allocator.destroy(m_head);
-    	      allocator.deallocate(m_head, 1);
-    	      m_head = new_head;  
+            node_allocator.destroy(m_head);
+    	    node_allocator.deallocate(m_head, 1);
+    	    m_head = new_head;  
         }    
     }
     

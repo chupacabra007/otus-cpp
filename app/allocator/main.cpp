@@ -45,7 +45,7 @@ int main() {
 	 }
 	 
 	 
-	 auto c2 = slist<int,Allocator<node<int>,10>>{};	 
+	 auto c2 = slist<int,Allocator<int,10>>{};	 
 	 for(int i = 0; i < 10; ++i)
 	 {
         c2.emplace(i);	 

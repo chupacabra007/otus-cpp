@@ -7,24 +7,19 @@
 template<typename T>
 struct is_string : public std::integral_constant<bool, std::is_same<char*, typename std::decay<T>::type>::value || std::is_same<const char*, typename std::decay<T>::type>::value || std::is_same<std::string, typename std::decay<T>::type>::value> {};
 
-
 template <typename T>
 struct is_container { static const bool value = false; };
-
 
 template <typename T>
 struct is_container<std::vector<T>> { static const bool value = true; };
 
-
 template <typename T>
 struct is_container<std::list<T>> { static const bool value = true; };
-
 
 template<typename T, std::enable_if_t<is_string<T>::value, int> = 0>
 void print_ip(T t) {
     std::cout << t << std::endl;
 }
-
 
 template<typename T, std::enable_if_t<std::is_integral<T>::value, int> = 1>
 void print_ip(T t) {
@@ -37,20 +32,17 @@ void print_ip(T t) {
     std::cout << (t & 0xFF) << std::endl;
 }
 
-
 template<typename T, std::enable_if_t<is_container<T>::value, int> = 2>
 void print_ip(T t) {
     bool flag = false;
-	for (const auto &ip_part : t)
-	{
-	    if (flag) std::cout << ".";	     	   
-	    std::cout << ip_part;
-	    flag = true;	         
+    for (const auto &ip_part : t)
+    {
+        if (flag) std::cout << ".";	     	   
+        std::cout << ip_part;
+        flag = true;	         
 	}
-	std::cout << std::endl;
+    std::cout << std::endl;
 }
-
-
 
 
 int main()

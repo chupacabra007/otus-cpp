@@ -26,35 +26,35 @@ int main() {
     {
         m1.insert(std::pair<int,int>(i,factorial(i)));
     }	 
-	 
-	auto m2 = std::map<int,int, std::less<int>, Allocator<std::pair<const int, int>, 10>>{};
-	for(int i = 0; i < 10; ++i)
-	{
-	    m2.insert(std::pair<int,int>(i,factorial(i)));
-	}
 	
-	for (auto const &item : m2)
-	{
+    auto m2 = std::map<int,int, std::less<int>, Allocator<std::pair<const int, int>, 10>>{};
+    for(int i = 0; i < 10; ++i)
+    {
+        m2.insert(std::pair<int,int>(i,factorial(i)));
+    }
+	
+    for (auto const &item : m2)
+    {
 	    std::cout << item.first << " " << item.second << std::endl;
-	}
+    }
 	
-	auto c1 = slist<int>{};
-	for(int i = 0; i < 10; ++i)
-	{
+    auto c1 = slist<int>{};
+    for(int i = 0; i < 10; ++i)
+    {
 	    c1.emplace(i);
-	}
+    }
 	 
 	
-	auto c2 = slist<int,Allocator<int,10>>{};
-	for(int i = 0; i < 10; ++i)
-	{
+    auto c2 = slist<int,Allocator<int,10>>{};
+    for(int i = 0; i < 10; ++i)
+    {
 	    c2.emplace(i);
-	}
+    }
 	
-	for(auto it : c2)
-	{
+    for(auto it : c2)
+    {
 	    std::cout << it << std::endl;
-	}
-	
-	return 0;
+    }
+    
+    return 0;
 }

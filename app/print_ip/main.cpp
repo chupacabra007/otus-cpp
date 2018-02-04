@@ -40,7 +40,7 @@ void print_ip(T t) {
         if (flag) std::cout << ".";	     	   
         std::cout << ip_part;
         flag = true;	         
-	}
+    }
     std::cout << std::endl;
 }
 

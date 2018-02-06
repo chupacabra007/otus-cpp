@@ -178,12 +178,12 @@ std::size_t UnboundArray<T>::size() const
 template <typename T>
 auto UnboundArray<T>::begin() const
 {
-    return std::cbegin(elementData);    
+    return std::begin(elementData);    
 }
  
  
 template <typename T>   
 auto UnboundArray<T>::end() const
 {
-    return std::cend(elementData);    
+    return std::end(elementData);    
 }

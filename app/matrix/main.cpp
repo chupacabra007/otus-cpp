@@ -1,10 +1,11 @@
 #include <iostream>
 #include <vector> 
+#include <map> 
 #include <cassert> 
 #include <algorithm>
 #include <utility>
 
-/*
+
 template <typename T>
 class UnboundArray
 {        
@@ -18,7 +19,6 @@ public:
 
     UnboundArray() : UnboundArray(DEFAULT_CAPACITY) {}
     
-
     UnboundArray(std::size_t initialCapacity) 
     {
         elementData.reserve(initialCapacity);
@@ -122,18 +122,6 @@ public:
     }   
 
 
-    auto begin()
-    {
-        return std::begin(elementData);    
-    }
-    
-    
-    auto end()
-    {
-        return std::end(elementData);    
-    }
-    
-    
     auto begin() const
     {
         return std::cbegin(elementData);    
@@ -158,7 +146,7 @@ class SpareArray : public UnboundArray<T>
 {
 private:
 
-    UnboundArray<std::size_t> indices;
+    UnboundArray<std::size_t> cells;
     
 public:
 
@@ -171,28 +159,34 @@ public:
     T& get(const int &index)
     {
          assert(index >= 0);
-         std::size_t pos = indexOfValue(index);
-         return UnboundArray<T>::get(pos);         
+         std::size_t cell = cellIndex(index);
+         return UnboundArray<T>::get(cell);         
     }
     
-    
-    std::size_t indexOfValue(const int &index)
+
+    UnboundArray<std::size_t> getCells()
     {
-        return indices.indexOf(index);
+        return cells;    
+    }
+
+    
+    std::size_t cellIndex(const int &index)
+    {
+        return cells.indexOf(index);
     }
     
 
     bool indexExists(const int &index)
     {
-        auto it = find(indices.begin(), indices.end(), index);
-        return it != indices.end();
+        auto it = find(cells.begin(), cells.end(), index);
+        return it != cells.end();
     }    
     
     
     void append(const T &el)
     {
         UnboundArray<T>::append(el);
-        indices.append(maxInsertedIndex() + 1);
+        cells.append(maxInsertedIndex() + 1);
     }
     
     
@@ -202,23 +196,23 @@ public:
         if (!indexExists(index)) 
         {
             UnboundArray<T>::append(el);
-            indices.append(index);
+            cells.append(index);
         }
         else 
         {
-            std::size_t pos = indexOfValue(index);
-            UnboundArray<T>::remove(pos);
-            UnboundArray<T>::insert(pos, el);
+            std::size_t cell = cellIndex(index);
+            UnboundArray<T>::remove(cell);
+            UnboundArray<T>::insert(cell, el);
         }
     }
     
     
     int maxInsertedIndex()
     {
-        if (!indices.isEmpty())
+        if (!cells.isEmpty())
         {
-            return std::distance(indices.begin(), 
-                                 std::max_element(indices.begin(), indices.end()));
+            return std::distance(cells.begin(), 
+                                 std::max_element(cells.begin(), cells.end()));
         }
         return -1;
     }
@@ -227,7 +221,7 @@ public:
     void remove(const int &index)
     {
         UnboundArray<T>::remove(index);
-        indices.remove(index);
+        cells.remove(index);
     }
     
     
@@ -248,16 +242,15 @@ private:
 public:
 
     Proxy(SpareArray<T, EMPTY_ELEMENT> &self, std::size_t index) : self(self), index(index) {}
-    
-    
+        
     T& operator=(const T &el)
     {
         if (el == EMPTY_ELEMENT)
         {
             if (self.indexExists(index)) 
             {
-                std::size_t pos = self.indexOfValue(index);
-                self.remove(pos);
+                std::size_t cell = self.cellIndex(index);
+                self.remove(cell);
             }
             return *(new T(EMPTY_ELEMENT));   
         }        
@@ -275,7 +268,17 @@ public:
         return self.get(index);
     }
     
+    
+    UnboundArray<std::size_t> getCells()
+    {
+        return self.getCells();    
+    }
 
+    std::size_t size()
+    {
+        return self.size();    
+    }
+    
 };
 
 
@@ -285,10 +288,10 @@ class SpareMatrix
 {
 private:
 
-    SpareArray<SpareArray<T, EMPTY_ELEMENT>, EMPTY_ELEMENT> values;    
+    SpareArray<SpareArray<T, EMPTY_ELEMENT>, EMPTY_ELEMENT> values;  
 
 public:
-    
+
     SpareArray<T, EMPTY_ELEMENT>& operator[](const int &index)
     {
         if (!values.indexExists(index))
@@ -311,124 +314,30 @@ public:
     }
     
     
-    auto begin()
+    const std::multimap<std::size_t, std::size_t> getXY()
     {
-        return std::begin(values);    
-    }
+        std::multimap<std::size_t,std::size_t> xy;
+        for (const auto &y : values.getCells())
+        {           
+            for (const auto &x : (*this)[y].getCells())
+            {
+                if ((*this)[y][x] != EMPTY_ELEMENT)
+                {
+                    xy.insert(std::pair<std::size_t,std::size_t>(x, y));
+                }
+            }   
+        }
+        return xy;  
+    } 
     
-    
-    auto end()
-    {
-        return std::end(values);    
-    }
-    
-    
-    auto begin() const
-    {
-        return std::cbegin(values);    
-    }
-    
-    
-    auto end() const
-    {
-        return std::cend(values);    
-    }
-      
-    
+
 };
 
-*/
 
-
-class Simple
-{
-private:
-   std::vector<std::size_t> indices;
-   std::vector<int> values;
-   
-public:
-   
-   void insert(std::size_t index, int value)
-   {
-       indices.push_back(index);
-       values.push_back(value);
-   }
-   
-   int at(std::size_t index)
-   {
-       return values[indices[index]];   
-   }
-   
-   class Iterator
-   {
-   private:
-       const std::vector<std::size_t>* indices;
-       const std::vector<int>* values;
-       std::size_t pos = 0;
-   public:
-       Iterator(const std::vector<std::size_t>* indices_, const std::vector<int>* values_, const std::size_t &pos_ = 0): 
-           values(values_), indices(indices_), pos(pos_){ }
-       
-       bool operator==(const Iterator& other){
-           return this == &other;       
-       }
-       
-       bool operator!=(const Iterator& other){
-           return !operator==(other);       
-       }
-       
-       Iterator operator++() {
-           pos++;
-           Iterator i = *this;
-           return i;       
-       }
-       
-       std::pair<std::size_t, int> operator*()
-       {
-           if (pos < (*values).size())
-           {
-               return std::make_pair((*indices)[pos], (*values)[pos]);          
-           }
-           std::cout << "EMPTY PAIR" << std::endl; //loops infinitely
-           return std::pair<std::size_t,int>{};           
-       }
-       
-       std::pair<std::size_t, int>* operator->()
-       {
-           if (pos < (*values).size()) 
-           {
-               std::pair<std::size_t,int> *p;
-               *p = std::make_pair((*indices)[pos], (*values)[pos]); 
-               return p;       
-           }  
-           return nullptr;      
-       }
-   };
-   
-   Iterator begin() const
-   {
-       return Iterator(&indices, &values, 0);   
-   }
-   
-   Iterator end() const
-   {
-       return Iterator(&indices, &values, values.size());   
-   }
-};
 
 int main() {
     
-    Simple s;
-    s.insert(10, 100);
-    std::cout << s.at(10) << std::endl;
-    int i = 0;
-    for (const std::pair<std::size_t, int> &p : s)
-    {
-        std::cout << p.first << " " << p.second << std::endl;   
-        if (i > 3) break;
-        i++; 
-    }    
-    /*
+    
     SpareMatrix<int, 0> matrix;
     
     for (int i = 0; i < 10; ++i)
@@ -441,6 +350,7 @@ int main() {
         matrix[i][9 - i] = 9 - i;
     }
     
+    std::cout << std::endl;
     
     for (int i = 1; i < 9; ++i)
     {
@@ -450,7 +360,9 @@ int main() {
         }  
         std::cout << std::endl;  
     }
-        
+    
+    matrix[100][900] = 999;
+    matrix[901][801] = 777;
     
     std::cout << std::endl;
     
@@ -458,12 +370,15 @@ int main() {
     
     std::cout << std::endl;
     
-    for (const auto &row : matrix)
-    {
-        //std::cout << matrix.index(row) << std::endl;
-    }   
+    std::cout << "Cells: " << std::endl;
+    std::cout << "r c v" << std::endl;
     
-    */
+    for (const auto &cell : matrix.getXY())
+    {
+         std::cout << cell.second << " " << cell.first << " " 
+                   << matrix[cell.second][cell.first] << std::endl;
+    }
+ 
     
     return 0;
 }
